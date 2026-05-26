@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+wrangler.jsonc
+wrangler.demo.jsonc
+.DS_Store
+*.log
+.worktrees/
+
+# Playwright
+e2e/.auth/
+test-results/
+playwright-report/
+.playwright/
+
+# Local superpowers docs (specs, plans)
+docs/superpowers/
+
+# Per-developer Claude Code preview launch config
+.claude/launch.json

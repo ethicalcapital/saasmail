@@ -1,0 +1,104 @@
+{
+  // Copy this file to wrangler.jsonc and fill in your values.
+  // wrangler.jsonc is gitignored so each deployer has their own config.
+  "name": "saasmail",
+  "main": "worker/src/index.ts",
+  "account_id": "<your-cloudflare-account-id>",
+  "compatibility_date": "2026-04-14",
+  "compatibility_flags": ["nodejs_compat"],
+  // Uncomment and configure if using a custom domain:
+  // "routes": [
+  //   {
+  //     "pattern": "mail.yourdomain.com",
+  //     "custom_domain": true
+  //   }
+  // ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "saasmail-db",
+      "database_id": "<your-d1-database-id>"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "saasmail-attachments"
+    }
+  ],
+  // Optional: enable Cloudflare Email Sending as the outbound provider.
+  // If Bavimail (BAVIMAIL_API_KEY + BAVIMAIL_ALIAS_ID) or RESEND_API_KEY is
+  // set, those win instead. Requires onboarding your domain at Email Service
+  // → https://dash.cloudflare.com/?to=/:account/email-service
+  // "send_email": [
+  //   { "name": "EMAIL" }
+  // ],
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "email_routing": {
+    "enabled": true
+  },
+  "observability": {
+    "enabled": true
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "EMAIL_QUEUE",
+        "queue": "saasmail-sequence-emails"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "saasmail-sequence-emails",
+        "max_batch_size": 10,
+        "max_retries": 3
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NOTIFICATIONS_HUB",
+        "class_name": "NotificationsHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["NotificationsHub"]
+    }
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  // Outbound email provider selection (runtime, no explicit toggle):
+  //   - Set BOTH BAVIMAIL_API_KEY and BAVIMAIL_ALIAS_ID (via `wrangler secret put`)
+  //     to use Bavimail. Takes precedence over Resend and the EMAIL binding.
+  //   - Set RESEND_API_KEY (via `wrangler secret put RESEND_API_KEY`) to use Resend.
+  //   - Or uncomment the `send_email` binding above to use Cloudflare Email Sending.
+  //   - If none are configured, send attempts return a "No email provider configured" error.
+  "vars": {
+    "BASE_URL": "<your-deployed-url>",
+    "TRUSTED_ORIGINS": "http://localhost:8080,http://localhost:8788,<your-deployed-url>",
+
+    // Prefix for better-auth session cookies. Drop a replacement logo into
+    // public/saasmail-logo.png to rebrand the favicon and in-app logo.
+    "COOKIE_PREFIX": "saasmail",
+
+    /* push notifications */
+    // VAPID_PRIVATE_KEY is a secret — set it with `wrangler secret put VAPID_PRIVATE_KEY`.
+    // VAPID_PUBLIC_KEY and VAPID_SUBJECT are public config (safe to commit here).
+    // Generate all three with `yarn vapid:generate`. Leave blank to disable push.
+    "VAPID_PUBLIC_KEY": "",
+    "VAPID_SUBJECT": "mailto:admin@<your-domain>"
+    // DO NOT set DISABLE_PASSKEY_GATE in production. It's intended for local
+    // dev only (see .dev.vars.example) and turns off the server-side passkey
+    // requirement for /api/* when set to "true".
+  }
+}
